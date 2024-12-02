@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit & Vegetable Classifier</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        header {
+            background: linear-gradient(135deg, #4CAF50, #2B9B29);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin: 0;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 40px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Form Styles */
+        input[type="file"], input[type="submit"] {
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 18px;
+            border-radius: 8px;
+            border: 2px solid #4CAF50;
+            width: 100%;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f1f1f1;
+        }
+
+        input[type="file"]:hover, input[type="submit"]:hover {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #388E3C;
+        }
+
+        input[type="file"]:focus, input[type="submit"]:focus {
+            outline: none;
+            border-color: #388E3C;
+        }
+
+        /* Loading and Result Section */
+        #loading {
+            font-size: 18px;
+            color: #4CAF50;
+            text-align: center;
+            display: none;
+            margin-top: 20px;
+        }
+
+        #result {
+            margin-top: 40px;
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background-color: #eef9f2;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #result h2 {
+            color: #4CAF50;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        #uploaded_image {
+    max-width: 300px; /* Set the maximum width */
+    max-height: 300px; /* Set the maximum height */
+    margin-top: 20px;
+    display: none;
+    border: 2px solid #4CAF50; /* Optional: Add a border to make it stand out */
+    border-radius: 10px; /* Optional: Rounded corners */
+    object-fit: contain; /* Ensures the entire image fits within the boundaries */
+    margin: 0 auto; /* Center the image horizontally */
+    display: block; /* Ensures the image is a block element for centering */
+}
+
+
+        #nutrition_info {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            color: #333;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            white-space: pre-wrap;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        /* Error Message */
+        .error {
+            color: #FF6347;
+            text-align: center;
+            display: none;
+            margin-top: 30px;
+            font-size: 1.2em;
+        }
+
+        /* Smooth Hover Animations for Buttons */
+        input[type="file"]:hover, input[type="submit"]:hover {
+            transform: scale(1.05);
+        }
+
+        /* Media Queries for Responsiveness */
+        @media screen and (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            h1 {
+                font-size: 2.2em;
+            }
+
+            input[type="file"], input[type="submit"] {
+                font-size: 16px;
+                padding: 12px;
+            }
+
+            #result h2 {
+                font-size: 2.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header><h1>Upload a Fruit or Vegetable Image</h1></header>
+    <div class="container">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required><br><br>
+            <input type="submit" value="Classify">
+        </form>
+        <div id="loading" class="loading">Processing image...</div>
+        <div id="result">
+            <h2>Prediction: <span id="predicted_label"></span></h2>
+            <img id="uploaded_image" src="" alt="Uploaded Image">
+            <h3>Nutrition Information:</h3>
+            <pre id="nutrition_info"></pre>
+        </div>
+        <div id="error" class="error">There was an error with the fetch operation.</div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const loadingIndicator = document.getElementById('loading');
+        const resultContainer = document.getElementById('result');
+        const errorContainer = document.getElementById('error');
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            loadingIndicator.style.display = 'block';
+            resultContainer.style.display = 'none';
+            errorContainer.style.display = 'none';
+
+            let formData = new FormData(form);
+            try {
+                let response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                let result = await response.json();
+
+                loadingIndicator.style.display = 'none';
+
+                // Update prediction and nutrition info
+                document.getElementById('predicted_label').innerText = result.predicted_label;
+                document.getElementById('nutrition_info').innerText = JSON.stringify(result.nutrition_data, null, 2);
+
+                // Display the uploaded image
+                const uploadedFile = form.querySelector('input[type="file"]').files[0];
+                const imageUrl = URL.createObjectURL(uploadedFile);
+                const uploadedImage = document.getElementById('uploaded_image');
+                uploadedImage.src = imageUrl;
+                uploadedImage.style.display = 'block';
+
+                resultContainer.style.display = 'block';
+            } catch (error) {
+                console.error('Fetch error:', error);
+                loadingIndicator.style.display = 'none';
+                errorContainer.style.display = 'block';
+            }
+        };
+    </script>
+</body>
+</html>
